@@ -1,5 +1,7 @@
 import numpy as np
 import heapq
+import pdb
+import sys
 
 default_goal_state = ["AEDCA", "BEACD", "BABCE", "DADBD", "BECBD"]
 
@@ -25,6 +27,7 @@ class State:
             self.factory = factory
             self.goal_state = goal_state
             self.ws = new_ws(["", "", "", "", ""], factory, goal_state)
+            self.path = factory
         else:
             self.parent = parent
             self.total_dist = parent.total_dist + distance(parent.factory, factory)
@@ -35,6 +38,7 @@ class State:
             self.factory = factory
             self.goal_state = parent.goal_state
             self.ws = new_ws(parent.ws, factory, parent.goal_state)
+            self.path = parent.path + factory
 
 # Build the widgets
 # ws      - current state of widgets
@@ -88,21 +92,18 @@ def distance(a, b):
 
     return factory_dist[x][y]
 
-# Calculates total distance traveled
+# Calculates total distance of a path
 # ws - current state of the widgets
-def total_distance(ws):
-    dist = [0, 0, 0, 0, 0]
-    count = 0
-    for w in ws:
-        for i in range(len(w) - 1):
-            dist[count] += distance(w[i], w[i+1])
-        count += 1
+def total_distance(path):
+    dist = 0
+    for i in range(len(path) - 1):
+        dist += distance(path[i], path[i+1])
 
-    print dist
+    return dist
 
 # Heuristic for A* search of least distance
-# Calculates the greates remaining distance for the widgets
-# Returns this max distance + current path cost
+# Calculates the least remaining distance for the widgets
+# Returns this min distance + current path cost
 def distance_heuristic(state):
     max_dist = 0
     ws = state.ws
@@ -111,15 +112,12 @@ def distance_heuristic(state):
     for i in range(5):
         w = ws[i]
         g = goal[i]
-        dist = 0
-        
-        for j in range(len(w)-1, len(g)-1):
-            dist += distance(g[j], g[j+1])
+        dist = total_distance(state.factory + g[len(w):])
 
         if dist > max_dist:
             max_dist = dist
 
-    return max_dist + state.total_dist
+    return (max_dist + state.total_dist)
 
 # Checks if we're at goal state
 # state - current state
@@ -148,12 +146,14 @@ def ayyy_dist(goal=default_goal_state):
     for i in range(5):
         state = State(rev_translate(i), goal)
 
-        heapq.heappush(frontier, (distance_heuristic(state), state))
-        front2.add(state)
+        heapq.heappush(frontier, (-distance_heuristic(state), state))
+        front2.add(state.path)
 
     step = 0
 
     while len(frontier) > 0:
+        if step % 500 == 0:
+            pdb.set_trace()
         tup = heapq.heappop(frontier)
         state = tup[1]
 
@@ -168,5 +168,6 @@ def ayyy_dist(goal=default_goal_state):
         for i in range(5):
             new_state = State(rev_translate(i), parent=state)
 
-            heapq.heappush(frontier, (distance_heuristic(new_state), new_state))
-            front2.add(new_state)
+            if new_state.path not in front2:
+                heapq.heappush(frontier, (-distance_heuristic(new_state), new_state))
+                front2.add(new_state.path)
