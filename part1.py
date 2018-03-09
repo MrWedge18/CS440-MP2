@@ -146,7 +146,7 @@ def ayyy_dist(goal=default_goal_state):
     for i in range(5):
         state = State(rev_translate(i), goal)
 
-        heapq.heappush(frontier, (-distance_heuristic(state), state))
+        heapq.heappush(frontier, (distance_heuristic(state), state))
         front2.add(state.path)
 
     step = 0
@@ -166,8 +166,12 @@ def ayyy_dist(goal=default_goal_state):
             return state
 
         for i in range(5):
-            new_state = State(rev_translate(i), parent=state)
+            for j in range(5):
+                if len(state.ws[j]) < 5 and rev_translate(i) == goal[j][len(state.ws[j])]:
+                    new_state = State(rev_translate(i), parent=state)
 
-            if new_state.path not in front2:
-                heapq.heappush(frontier, (-distance_heuristic(new_state), new_state))
-                front2.add(new_state.path)
+                    if new_state.path not in front2:
+                        heapq.heappush(frontier, (distance_heuristic(new_state), new_state))
+                        front2.add(new_state.path)
+
+                    break
