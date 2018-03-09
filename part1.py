@@ -101,9 +101,34 @@ def total_distance(path):
 
     return dist
 
+# Chooses a heuristic based on flag
+# flag = True: distance heuristic
+# flat = False: stops heuristic
+def heuristic(state, flag):
+    if flag:
+        return distance_heuristic(state)
+    else:
+        return stop_heuristic(state)
+
+# Heuristic for A* search of least stops
+# Calculates the greatest remaining stops for the widgets
+# Returns this max stops + current path cost
+def stop_heuristic(state):
+    max_stops = 0
+    ws = state.ws
+    goal = state.goal_state
+
+    for i in range(5):
+        num_stops = len(goal[i]) - len(ws[i])
+
+        if num_stops > max_stops:
+            max_stops = num_stops
+
+    return len(state.path) + max_stops
+
 # Heuristic for A* search of least distance
-# Calculates the least remaining distance for the widgets
-# Returns this min distance + current path cost
+# Calculates the greatest remaining distance for the widgets
+# Returns this max distance + current path cost
 def distance_heuristic(state):
     max_dist = 0
     ws = state.ws
@@ -138,7 +163,7 @@ def build_path(state):
     return build_path(state.parent) + state.factory
 
 # A* search to minimize distance
-def ayyy_dist(goal=default_goal_state):
+def ayyy(flag, goal=default_goal_state):
 
     frontier = []
     front2 = set([])
@@ -146,23 +171,17 @@ def ayyy_dist(goal=default_goal_state):
     for i in range(5):
         state = State(rev_translate(i), goal)
 
-        heapq.heappush(frontier, (distance_heuristic(state), state))
+        heapq.heappush(frontier, (heuristic(state, flag), state))
         front2.add(state.path)
 
-    step = 0
-
     while len(frontier) > 0:
-        if step % 500 == 0:
-            pdb.set_trace()
         tup = heapq.heappop(frontier)
         state = tup[1]
-
-        print(step)
-        step += 1
         
         if check_goal(state, goal):
             print("distance:" + str(state.total_dist))
-            print("path: " + build_path(state))
+            print("stops:" + str(len(state.path)))
+            print("path: " + state.path)
             return state
 
         for i in range(5):
@@ -171,7 +190,7 @@ def ayyy_dist(goal=default_goal_state):
                     new_state = State(rev_translate(i), parent=state)
 
                     if new_state.path not in front2:
-                        heapq.heappush(frontier, (distance_heuristic(new_state), new_state))
+                        heapq.heappush(frontier, (heuristic(new_state, flag), new_state))
                         front2.add(new_state.path)
 
                     break
