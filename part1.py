@@ -174,11 +174,16 @@ def ayyy(flag, goal=default_goal_state):
         heapq.heappush(frontier, (heuristic(state, flag), state))
         front2.add(state.path)
 
+        step = 0
+
     while len(frontier) > 0:
         tup = heapq.heappop(frontier)
         state = tup[1]
+
+        step += 1
         
         if check_goal(state, goal):
+            print("steps: " + str(step))
             print("distance:" + str(state.total_dist))
             print("stops:" + str(len(state.path)))
             print("path: " + state.path)
