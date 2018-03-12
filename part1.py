@@ -202,7 +202,7 @@ def ayyy(flag, goal=default_goal_state):
             print("stops:" + str(len(state.path)))
             print("path: " + state.path)
             print("nodes expanded: " + str(nodes_expanded))
-            return state
+            return
 
         for i in range(5):
             for j in range(5):
