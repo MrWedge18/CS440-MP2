@@ -185,7 +185,7 @@ def ayyy(flag, goal=default_goal_state):
     widget_len = len(goal[0])
 
     frontier = []
-    front2 = set([])
+    front2 = set([])                # To make sure we don't add a state to frontier twice
 
     for i in range(5):
         state = State(rev_translate(i), goal)
