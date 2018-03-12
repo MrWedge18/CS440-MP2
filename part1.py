@@ -2,9 +2,11 @@ import numpy as np
 import heapq
 import pdb
 import sys
+import random
 
 default_goal_state = ["AEDCA", "BEACD", "BABCE", "DADBD", "BECBD"]
 
+# NP array for distances between factories
 factory_dist = np.array([[   0, 1064,  673, 1401, 277],
                          [1064,    0,  958, 1934, 337],
                          [ 673,  958,    0, 1001, 399],
@@ -162,8 +164,25 @@ def build_path(state):
 
     return build_path(state.parent) + state.factory
 
+# Randomlly generate a goal state of length "length"
+def random_goal_state(length):
+    rand_goal = ["", "", "", "", ""]
+    for i in range(length):
+        for i in range(5):
+            r = random.randint(0, 4)
+            c = rev_translate(r)
+            rand_goal[i] += c
+
+    return rand_goal
+
 # A* search to minimize distance
+# flag - The heuristic to be used
+#        True - Distance
+#        False - Stops
 def ayyy(flag, goal=default_goal_state):
+    nodes_expanded = 0
+
+    widget_len = len(goal[0])
 
     frontier = []
     front2 = set([])
@@ -174,27 +193,24 @@ def ayyy(flag, goal=default_goal_state):
         heapq.heappush(frontier, (heuristic(state, flag), state))
         front2.add(state.path)
 
-        step = 0
-
     while len(frontier) > 0:
         tup = heapq.heappop(frontier)
         state = tup[1]
-
-        step += 1
         
         if check_goal(state, goal):
-            print("steps: " + str(step))
             print("distance:" + str(state.total_dist))
             print("stops:" + str(len(state.path)))
             print("path: " + state.path)
+            print("nodes expanded: " + str(nodes_expanded))
             return state
 
         for i in range(5):
             for j in range(5):
-                if len(state.ws[j]) < 5 and rev_translate(i) == goal[j][len(state.ws[j])]:
+                if len(state.ws[j]) < widget_len and rev_translate(i) == goal[j][len(state.ws[j])]:
                     new_state = State(rev_translate(i), parent=state)
 
                     if new_state.path not in front2:
+                        nodes_expanded += 1
                         heapq.heappush(frontier, (heuristic(new_state, flag), new_state))
                         front2.add(new_state.path)
 
