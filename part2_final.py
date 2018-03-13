@@ -1,13 +1,42 @@
+# Michael Wang (mgwang3)
+# David He (davidhe2)
+
 import numpy as np
 import random
 from math import pow
 from sys import maxint
 import pdb
 
-
 board = np.zeros((7, 7))        # Actual state of the board. 0 = empty, 1 = red, 2 = blue
 base = 5                        # For evaluation function. Explained later
-nodes_expanded = 0
+mm_nodes_expanded = 0           # Minimax nodes expanded
+ab_nodes_expanded = 0           # Alpha beta nodex expanded
+red_piece = "a"
+blue_piece = "A"
+
+mm_nodes_expanded_per_move = np.zeros((49))
+ab_nodes_expanded_per_move = np.zeros((49))
+move = 1
+
+# We were dumb and didn't read the entire assignment before starting.
+# We weren't representing the board correctly, so this converts it.
+converted_board = np.array([[".", ".", ".", ".", ".", ".", "."],
+                            [".", ".", ".", ".", ".", ".", "."],
+                            [".", ".", ".", ".", ".", ".", "."],
+                            [".", ".", ".", ".", ".", ".", "."],
+                            [".", ".", ".", ".", ".", ".", "."],
+                            [".", ".", ".", ".", ".", ".", "."],
+                            [".", ".", ".", ".", ".", ".", "."]])
+def convert_board():
+    global red_piece, blue_piece
+    for x in range(7):
+        for y in range(7):
+            if board[x][y] == 1 and converted_board[x][y] == ".":
+                converted_board[x][y] = red_piece
+                red_piece = chr(ord(red_piece) + 1)
+            elif board[x][y] == 2 and converted_board[x][y] == ".":
+                converted_board[x][y] = blue_piece
+                blue_piece = chr(ord(blue_piece) + 1)
 
 # State representation
 # parent - not used, but already used a lot, and we're too lazy to go and remove it from every call
@@ -31,7 +60,7 @@ class Node:
 def alpha_beta_place_piece(player):
     node = Node(None, board, player, None)                      # Initial node. Just the current state of the board
     tup = alpha_beta(node, 0, player, -maxint - 1, maxint)
-    if tup[0] is not None:
+    if tup[1] is not None:
         piece = tup[1]
     else:
         return -1
@@ -51,7 +80,9 @@ def alpha_beta_place_piece(player):
 # node  - current node
 # depth - current depth (0 - 3)
 def alpha_beta(node, depth, player, alpha, beta):
-    global nodes_expanded
+    global ab_nodes_expanded
+    global ab_nodes_expanded_per_move
+    global move
     if depth == 3:      # At depth 3, return value of board
         p = 1
         if player == 1: # At depth 3, player is the opponent number. Switch it back
@@ -73,7 +104,8 @@ def alpha_beta(node, depth, player, alpha, beta):
                     n = Node(node, node.board, player, (x, y))              # Places potential piece
                     v = alpha_beta(n, depth + 1, opponent, alpha, beta)     # Recurse
 
-                    nodes_expanded += 1
+                    ab_nodes_expanded += 1
+                    ab_nodes_expanded_per_move[move] += 1
 
                     if v[0] > best_value:                                   # Updates best value
                         best_value = v[0]
@@ -97,7 +129,10 @@ def alpha_beta(node, depth, player, alpha, beta):
                 if node.board[x][y] == 0:
                     n = Node(node, node.board, player, (x, y))
                     v = alpha_beta(n, depth + 1, opponent, alpha, beta)
-                    nodes_expanded += 1
+
+                    ab_nodes_expanded += 1
+                    ab_nodes_expanded_per_move[move] += 1
+
                     if v[0] < best_value:
                         best_value = v[0]
                         best_move = (x, y)
@@ -121,7 +156,7 @@ def alpha_beta(node, depth, player, alpha, beta):
 def minimax_place_piece(player):
     node = Node(None, board, player, None)
     tup = minimax(node, 0, player)
-    if tup[0] is not None:
+    if tup[1] is not None:
         piece = tup[1]
     else:
         return -1
@@ -138,7 +173,9 @@ def minimax_place_piece(player):
 
 # The same as alpha beta. Just no alpha or beta
 def minimax(node, depth, player):
-    global nodes_expanded
+    global mm_nodes_expanded
+    global mm_nodes_expanded_per_move
+    global move
     if depth == 3:
         p = 1
         if player == 1:
@@ -159,7 +196,10 @@ def minimax(node, depth, player):
                 if node.board[x][y] == 0:
                     n = Node(node, node.board, player, (x, y))
                     v = minimax(n, depth + 1, opponent)
-                    nodes_expanded += 1
+
+                    mm_nodes_expanded += 1
+                    mm_nodes_expanded_per_move[move] += 1
+                    
                     if v[0] > best_value:
                         best_value = v[0]
                         best_move = (x, y)
@@ -176,7 +216,10 @@ def minimax(node, depth, player):
                 if node.board[x][y] == 0:
                     n = Node(node, node.board, player, (x, y))
                     v = minimax(n, depth + 1, opponent)
-                    nodes_expanded += 1
+
+                    mm_nodes_expanded += 1
+                    mm_nodes_expanded_per_move[move] += 1
+
                     if v[0] < best_value:
                         best_value = v[0]
                         best_move = (x, y)
@@ -380,8 +423,10 @@ def find_blank(curr, end):
 # type: 1 = reflex
 #       2 = minimax
 #       3 = alpha beta
-def play(red_type, blue_type):
-    first = True    # Flag for reflex agent first move
+# first - True if reflex agent should start with first move
+#         False if reflex agent shouldn't start with first move (first move already on board)
+def play(red_type, blue_type, first=True):
+    global move
 
     while True:
         red_win = 1         # 1 = no win yet
@@ -394,15 +439,19 @@ def play(red_type, blue_type):
         elif red_type == 3:
             red_win = alpha_beta_place_piece(1)
 
+        convert_board()
+
         if red_win == -1:
             print_board()
-            print("Nodes expanded: " + str(nodes_expanded))
+            print("Minimax nodes expanded: " + str(mm_nodes_expanded))
+            print("Alpha beta nodes expanded: " + str(ab_nodes_expanded))
             print("No move available to red agent")
             return
 
         if red_win == 0:
             print_board()
-            print("Nodes expanded: " + str(nodes_expanded))
+            print("Minimax nodes expanded: " + str(mm_nodes_expanded))
+            print("Alpha beta nodes expanded: " + str(ab_nodes_expanded))
             print("Red wins!")
             return
 
@@ -412,31 +461,40 @@ def play(red_type, blue_type):
             blue_win = minimax_place_piece(2)
         elif blue_type == 3:
             blue_win = alpha_beta_place_piece(2)
+
+        convert_board()
         
         if blue_win == -1:
             print_board()
-            print("Nodes expanded: " + str(nodes_expanded))
+            print("Minimax nodes expanded: " + str(mm_nodes_expanded))
+            print("Alpha beta nodes expanded: " + str(ab_nodes_expanded))
             print("No move available to blue agent")
             return
 
         if blue_win == 0:
             print_board()
-            print("Nodes expanded: " + str(nodes_expanded))
+            print("Minimax nodes expanded: " + str(mm_nodes_expanded))
+            print("Alpha beta nodes expanded: " + str(ab_nodes_expanded))
             print("Blue Wins!")
             return
 
         if first:
             first = False
 
-# Reset nodes_expanded
-# Fills entire board with i (for testing)
-# i = 0 to reset board
-def reset(i):
-    global nodes_expanded
-    nodes_expanded = 0
+        move += 1
+
+# Resets board and globals
+def reset():
+    global mm_nodes_expanded, ab_nodes_expanded, red_piece, blue_piece, board, converted_board, move
+    mm_nodes_expanded = 0
+    ab_nodes_expanded = 0
+    red_piece = "a"
+    blue_piece = "A"
+    move = 1
     for x in range(7):
         for y in range(7):
-            board[x][y] = i
+            board[x][y] = 0
+            converted_board[x][y] = "."
 
 # Places piece according to reflex rules
 # player - see above
@@ -552,7 +610,7 @@ def hchain(length, (x, y), player, five):
     else:
         return (-1, -1)
 
-# i'm not gonna even write see above anymore
+# See above
 def vchain(length, (x, y), player, five):
     if length == 0 and board[x][y] != player:
         return (x, y - 1)
@@ -566,6 +624,7 @@ def vchain(length, (x, y), player, five):
     else:
         return (-1, -1)
 
+# See above
 def nwchain(length, (x, y), player, five):
     if length == 0 and board[x][y] != player:
         return (x - 1, y + 1)
@@ -579,6 +638,7 @@ def nwchain(length, (x, y), player, five):
     else:
         return (-1, -1)
 
+# See above
 def swchain(length, (x, y), player, five):
     if length == 0 and board[x][y] != player:
         return (x - 1, y - 1)
@@ -593,9 +653,65 @@ def swchain(length, (x, y), player, five):
         return (-1, -1)
 
 # Prints the board because numpy array stores it in wrong orientation
-def print_board(b=board):
+def print_board(b=converted_board):
     for y in reversed(range(7)):
         temp = []
         for x in range(7):
             temp.append(b[x][y])
         print(np.array(temp))
+
+# For the report
+# Note: There might be a bug somewhere. Game can't be played consecutively
+
+# print("Reflex vs Reflex")
+# board[1][1] = 1
+# board[5][5] = 2
+# converted_board[1][1] = "a"
+# converted_board[5][5] = "A"
+# red_piece = "b"
+# blue_piece = "B"
+# print_board()
+# print("Playing...")
+# play(1, 1, False)
+
+# print("\nAlpha beta vs Minimax")
+# reset()
+# print_board()
+# print("Playing...")
+# play(3, 2)
+# print("move\t" + "Alpha Beta\t" + "Minimax")
+# for i in range (49):
+    # print(str(i) + "\t" + str(ab_nodes_expanded_per_move[i]) + "\t\t" + str(mm_nodes_expanded_per_move[i]))
+
+# print("\nMinimax vs Alpha beta")
+# reset()
+# print_board()
+# print("Playing...")
+# play(2, 3)
+# print("move\t" + "Alpha Beta\t" + "Minimax")
+# for i in range (49):
+    # print(str(i) + "\t" + str(ab_nodes_expanded_per_move[i]) + "\t\t" + str(mm_nodes_expanded_per_move[i]))
+
+# print("\nAlpha beta vs reflex")
+# reset()
+# print_board()
+# print("Playing...")
+# play(3, 1)
+
+# print("\nReflex vs Alpha beta")
+# reset()
+# print_board()
+# print("Playing...")
+# play(1, 3)
+
+# print("\nReflex vs Minimax")
+# reset()
+# print_board()
+# print("Playing...")
+# play(1, 2)
+
+# print("\nMinimax vs Reflex")
+# reset()
+# print_board()
+# print("Playing...")
+# play(2, 1)
